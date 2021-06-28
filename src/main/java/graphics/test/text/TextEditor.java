@@ -1,116 +1,97 @@
 package graphics.test.text;
 
+import java.util.Iterator;
+import java.util.function.Consumer;
 
-import org.davidmoten.text.utils.WordWrap;
+import static graphics.test.text.TextEditor.CharEntry;
+import static java.nio.charset.StandardCharsets.US_ASCII;
 
-import java.nio.charset.Charset;
-import java.nio.charset.StandardCharsets;
+public class TextEditor implements Iterable<CharEntry> {
 
-public class TextEditor {
-
-    // https://www.cs.unm.edu/~crowley/papers/sds.pdf
-
-    // todo: replace internal getter method calls with the actual field value?
-    //  fewer instruction calls? no clue.
-
-    // todo: # redo structure - priority low
-    // This Works fine, but i will have to rethink the data structure when i have the time.
-    // The double-linked structure is just fine, that's not the problem.
-    // It's the text wrapping that mess up the pointers position
-    // i want to have more control, i want line nr. word count, what line / word is the pointer on etc.
-
-    private static final Charset US_ASCII = StandardCharsets.US_ASCII;
-
-    private static final int FONT_WIDTH_NULL = -1;
-
-    private final Node<Character> sentinel;
-    private Node<Character> firstChar;
-    private Node<Character> pointer;
-    private int internalCount = 0; // list-entries
-
-    private final int maxChars;
-    private int fontW;
-    private int containerW;
-    private boolean dirty;
-    private boolean useWrap;
-
-    private byte[] data; // bytebuffer?
+    private final CharEntry sentinel;
+    private CharEntry firstEntry;
+    private CharEntry pointer;
+    private int count;
 
     public TextEditor() {
-        this(Integer.MAX_VALUE);
-    }
-
-    public TextEditor(int maxChars) {
-        this(maxChars, FONT_WIDTH_NULL,Integer.MAX_VALUE,false);
-    }
-
-    public TextEditor(int maxChars, int fontW, int containerW, boolean useWrap) {
-
-        sentinel = new Node<>(' ');
+        sentinel = new CharEntry((byte)0x20);
         pointer = sentinel;
-
-        this.fontW = fontW;
-        this.containerW = containerW;
-        this.maxChars = Math.max(maxChars,1);
-        this.useWrap = useWrap;
+        count = 0;
     }
 
-    public void commandInsert(CharSequence text) {
+    public void commandType(byte charCode) {
 
-        int len = text.length();
+        CharEntry newNode;
 
-        for (int i = 0; i < len; i++) {
+        if (isEmpty()) {
 
-            if (!commandType(text.charAt(i))) break;
+            newNode = new CharEntry(sentinel,charCode,null);
+
+            firstEntry = newNode;
+
+            sentinel.setNext(firstEntry);
         }
+        else {
+
+            newNode = new CharEntry(pointer,charCode,pointer.next());
+
+            pointer.setNext(newNode);
+        }
+        pointer = newNode;
+
+        count++;
     }
 
-    public boolean commandType(Character c) {
+    public boolean commandType(char c) {
 
-        if (hasAvailableSpace()) {
+        if (c <= Byte.MAX_VALUE) {
 
-            Node<Character> newNode;
+            commandType((byte) c);
 
-            if (isEmpty()) {
+            return true;
+        }
+        return false;
+    }
 
-                newNode = new Node<>(sentinel,c,null);
+    public void commandInsert(byte[] us_ascii) {
 
-                firstChar = newNode;
+        for (byte b : us_ascii) commandType(b);
 
-                sentinel.setNext(firstChar);
-            }
-            else {
+    }
 
-                newNode = new Node<>(pointer,c,pointer.next());
+    public boolean commandInsert(CharSequence text) {
 
-                pointer.setNext(newNode);
-            }
-            pointer = newNode;
+        byte[] us_ascii = text.toString().getBytes(US_ASCII);
 
-            internalCount++;
+        if (us_ascii.length == text.length()) {
 
-            return dirty = true;
+            commandInsert(us_ascii);
+
+            return true;
         }
         return false;
     }
 
     public void commandSpace() {
-        commandType(' ');
+
+        commandType((byte)0x0F);
     }
 
     public void commandNewLine() {
-        commandType('\n');
+
+        commandType((byte)0x0A);
     }
 
     public void commandTab() {
-        commandType('\t');
+
+        commandType((byte)0x09);
     }
 
     public void commandDelete() {
 
         if (isEmpty() || onSentinel()) return;
 
-        if (onFirstChar()) {
+        if (onFirstEntry()) {
 
             if (pointer.hasNext()) {
 
@@ -118,7 +99,7 @@ public class TextEditor {
             }
             pointer.prev().setNext(pointer.next());
 
-            pointer = firstChar = pointer.next();
+            pointer = firstEntry = pointer.next();
         }
         else {
 
@@ -130,20 +111,7 @@ public class TextEditor {
 
             pointer = pointer.next();
         }
-        internalCount--;
-
-        dirty = true;
-    }
-
-    public void commandClear() {
-
-        if (!isEmpty()) {
-
-            sentinel.setNext(null);
-            pointer = firstChar = null;
-            internalCount = 0;
-            data = null;
-        }
+        count--;
     }
 
     public void moveForward() {
@@ -151,8 +119,6 @@ public class TextEditor {
         if (pointer.hasNext()) {
 
             pointer = pointer.next();
-
-            System.out.println(pointer.element);
         }
     }
 
@@ -161,22 +127,6 @@ public class TextEditor {
         if (pointer.hasPrev()) {
 
             pointer = pointer.prev();
-
-            System.out.println(pointer.element);
-        }
-    }
-
-    public void moveDown() {
-
-        if (isEmpty()) return;
-
-        int counter = lineLength();
-
-        while (pointer.hasNext()) {
-
-            pointer = pointer.next();
-
-            if (--counter == 0) break;
         }
     }
 
@@ -193,119 +143,38 @@ public class TextEditor {
         }
     }
 
-    public void setDimensions(int fontW, int containerW) {
-
-        this.fontW = fontW;
-        this.containerW = containerW;
-
-        if (isUsingWordWrap()) dirty = true;
-    }
-
-    public boolean isEmpty() {
-
-        return internalCount == 0;
-    }
-
-    public boolean isUsingWordWrap() {
-
-        return useWrap;
-    }
-
-    public boolean hasAvailableSpace() {
-
-        return (maxChars - internalCount) > 0;
-    }
-
-    public int internalCount() {
-
-        return internalCount;
-    }
-
-    public int lineLength() {
-        if (fontW == FONT_WIDTH_NULL) {
-            return Integer.MAX_VALUE;
-        }
-        return containerW / fontW;
-    }
-
-    public int size() {
-
-        return data.length;
-    }
-
-    @Override
-    public String toString() {
-
-        return isEmpty() ? " " : new String(getBytes());
-
-    }
-
-    public void toggleWrappingOn() {
-
-        useWrap = true;
-
-        if (!isEmpty()) dirty = true;
-    }
-
-    public void toggleWrappingOf() {
-
-        useWrap = false;
-
-        if (!isEmpty()) dirty = true;
-    }
-
-    public void print() {
-
-        System.out.println(this);
-    }
-
     public byte[] getBytes() {
 
         if (isEmpty()) return null;
 
-        if (dirty) refresh();
+        byte[] bytes = new byte[count];
 
-        return data;
-    }
-
-    // todo # Double Conversion
-
-    private void refresh() {
-
-        byte[] array = new byte[internalCount()];
-
-        Node<Character> node = firstChar;
+        CharEntry entry = firstEntry;
 
         int i = 0;
 
         do {
-            array[i++] = (byte) node.element().charValue();
-            node = node.next();
+            bytes[i++] = entry.code();
+            entry = entry.next();
         }
-        while (node != null);
+        while (entry != null);
 
-        if (isUsingWordWrap()) { // Annoying double conversions.. It's acceptable.
-
-            String s = new String(array,US_ASCII);
-            String q;
-
-            System.out.println(s);
-            System.out.println();
-
-            data = WordWrap.from(s).maxWidth(lineLength()).wrap().getBytes(US_ASCII);
-            q = new String(data,US_ASCII);
-            System.out.println(q);
-        }
-        else {
-
-            data = array;
-        }
-        dirty = false;
+        return bytes;
     }
 
-    private boolean atEnd() {
+    public boolean isEmpty() {
 
-        return !pointer.hasNext();
+        return count == 0;
+    }
+
+    public int length() {
+
+        return count;
+    }
+
+    public boolean isPointer(CharEntry entry) {
+
+        return pointer.equals(entry);
     }
 
     private boolean onSentinel() {
@@ -313,44 +182,85 @@ public class TextEditor {
         return !pointer.hasPrev();
     }
 
-    private boolean onFirstChar() {
+    private boolean onFirstEntry() {
 
-        return pointer.equals(firstChar);
+        return pointer.equals(firstEntry);
     }
 
-    private static class Node<E> {
+    private boolean atEnd() {
 
-        Node<E> next;
-        Node<E> prev;
-        E element;
+        return !pointer.hasNext();
+    }
 
-        public Node(E elem) {
-            this.prev = null;
-            this.next = null;
-            element = elem;
+    @Override
+    public String toString() {
+
+        return isEmpty() ? "" : new String(getBytes(),US_ASCII);
+    }
+
+    @Override
+    public Iterator<CharEntry> iterator() {
+
+        return new Iterator<>() {
+
+            private final CharEntry entry = TextEditor.this.firstEntry;
+
+            @Override
+            public boolean hasNext() {
+
+                return entry.hasNext();
+            }
+
+            @Override
+            public CharEntry next() {
+
+                return entry.next();
+            }
+
+            @Override
+            public void remove() {
+
+                throw new UnsupportedOperationException();
+            }
+        };
+    }
+
+    @Override
+    public void forEach(Consumer<? super CharEntry> action) {
+
+        Iterable.super.forEach(action);
+    }
+
+    protected static class CharEntry {
+
+        CharEntry next;
+        CharEntry prev;
+        byte charCode;
+
+        public CharEntry(byte charCode) {
+            this(null,charCode,null);
         }
 
-        public Node(Node<E> prev, E elem, Node<E> next) {
+        public CharEntry(CharEntry prev, byte charCode, CharEntry next) {
             this.prev = prev;
             this.next = next;
-            element = elem;
+            this.charCode = charCode;
         }
 
-        Node<E> next() { return next; }
+        CharEntry next() { return next; }
 
-        Node<E> prev() { return prev; }
+        CharEntry prev() { return prev; }
 
-        void setNext (Node<E> dnode) { next = dnode; }
+        void setNext (CharEntry entry) { next = entry; }
 
-        void setPrev(Node<E> dnode) { prev = dnode; }
+        void setPrev(CharEntry entry) { prev = entry; }
 
-        E element() { return element; }
+        byte code() { return charCode; }
 
-        void setElement (E elem) { element = elem; }
+        void setCode(byte charCode) { this.charCode = charCode; }
 
         boolean hasNext() { return next != null; }
 
         boolean hasPrev() { return prev != null; }
-
     }
 }
