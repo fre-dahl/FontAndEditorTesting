@@ -1,0 +1,33 @@
+
+What i want.
+
+1. i want to register input from keyboard.
+
+2. I want to filter that input. Through GLFW -> Bitmask to ignore values > 0x7F
+
+3. Fields (editor/text fields etc.) that implement some keyInputListener interface
+
+4. i want 7-bit us_ascii only, packing the chars to bytes and reducing texture allocation
+
+    would also eliminate the need for key-value maps, instead using a static ascii byte[127]
+    or smaller actually  32 -> 126 something like that. (cntr characters)
+
+5. Loading fonts / creating fonts
+
+6. Excluding glyphs outside the 7-bit space.
+
+7. Keep everything as SIMPLE as possible, it's just letters on a screen
+
+8. dynamic Editor with simple functionality including
+
+    pointer movement, deleting, inserting
+
+9. real time word wrapping, changing / resizing fonts etc.
+
+10. sending the data to GPU
+
+11. Pixel styled fonts is our main target -> minimal memory, perfect scaling.
+
+    ..not really a need for kerning or typography deep dive
+
+12. antialiasing, filtering for non-pixel style fonts
