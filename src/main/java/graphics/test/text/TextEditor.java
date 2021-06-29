@@ -3,8 +3,8 @@ package graphics.test.text;
 import java.util.Iterator;
 import java.util.function.Consumer;
 
-import static graphics.test.text.TextEditor.CharEntry;
 import static java.nio.charset.StandardCharsets.US_ASCII;
+
 
 public class TextEditor implements Iterable<CharEntry> {
 
@@ -19,7 +19,7 @@ public class TextEditor implements Iterable<CharEntry> {
         count = 0;
     }
 
-    public void commandType(byte charCode) {
+    public void type(byte charCode) {
 
         CharEntry newNode;
 
@@ -31,85 +31,98 @@ public class TextEditor implements Iterable<CharEntry> {
 
             sentinel.setNext(firstEntry);
         }
+        else if (onSentinel()) {
+
+            newNode = new CharEntry(pointer,charCode,pointer.next());
+
+            pointer.setNext(newNode);
+
+            firstEntry = newNode;
+        }
         else {
 
             newNode = new CharEntry(pointer,charCode,pointer.next());
 
             pointer.setNext(newNode);
+
         }
         pointer = newNode;
 
         count++;
     }
 
-    public boolean commandType(char c) {
+    public boolean type(char c) {
 
         if (c <= Byte.MAX_VALUE) {
 
-            commandType((byte) c);
+            type((byte) c);
 
             return true;
         }
         return false;
     }
 
-    public void commandInsert(byte[] us_ascii) {
+    public void insert(byte[] us_ascii) {
 
-        for (byte b : us_ascii) commandType(b);
+        for (byte b : us_ascii) type(b);
 
     }
 
-    public boolean commandInsert(CharSequence text) {
+    public boolean insert(CharSequence text) {
 
         byte[] us_ascii = text.toString().getBytes(US_ASCII);
 
         if (us_ascii.length == text.length()) {
 
-            commandInsert(us_ascii);
+            insert(us_ascii);
 
             return true;
         }
         return false;
     }
 
-    public void commandSpace() {
+    public void clear() {
 
-        commandType((byte)0x0F);
+        if (!isEmpty()) {
+
+            sentinel.setNext(null);
+
+            pointer = firstEntry = null;
+
+            count = 0;
+        }
     }
 
-    public void commandNewLine() {
+    public void space() {
 
-        commandType((byte)0x0A);
+        type((byte)0x20);
     }
 
-    public void commandTab() {
+    public void newLine() {
 
-        commandType((byte)0x09);
+        type((byte)0x0A);
     }
 
-    public void commandDelete() {
+    public void tab() {
+
+        type((byte)0x09);
+    }
+
+    public void delete() {
 
         if (isEmpty() || onSentinel()) return;
 
+        if (pointer.hasNext()) {
+
+            pointer.next().setPrev(pointer.prev());
+        }
+        pointer.prev().setNext(pointer.next());
+
+        pointer = pointer.prev();
+
         if (onFirstEntry()) {
 
-            if (pointer.hasNext()) {
-
-                pointer.next().setPrev(pointer.prev());
-            }
-            pointer.prev().setNext(pointer.next());
-
-            pointer = firstEntry = pointer.next();
-        }
-        else {
-
-            if (pointer.hasNext()) {
-
-                pointer.next().setPrev(pointer.prev());
-            }
-            pointer.prev().setNext(pointer.next());
-
-            pointer = pointer.next();
+            firstEntry = pointer.next();
         }
         count--;
     }
@@ -203,7 +216,7 @@ public class TextEditor implements Iterable<CharEntry> {
 
         return new Iterator<>() {
 
-            private final CharEntry entry = TextEditor.this.firstEntry;
+            private CharEntry entry = TextEditor.this.sentinel;
 
             @Override
             public boolean hasNext() {
@@ -214,7 +227,7 @@ public class TextEditor implements Iterable<CharEntry> {
             @Override
             public CharEntry next() {
 
-                return entry.next();
+                return entry = entry.next();
             }
 
             @Override
@@ -229,38 +242,5 @@ public class TextEditor implements Iterable<CharEntry> {
     public void forEach(Consumer<? super CharEntry> action) {
 
         Iterable.super.forEach(action);
-    }
-
-    protected static class CharEntry {
-
-        CharEntry next;
-        CharEntry prev;
-        byte charCode;
-
-        public CharEntry(byte charCode) {
-            this(null,charCode,null);
-        }
-
-        public CharEntry(CharEntry prev, byte charCode, CharEntry next) {
-            this.prev = prev;
-            this.next = next;
-            this.charCode = charCode;
-        }
-
-        CharEntry next() { return next; }
-
-        CharEntry prev() { return prev; }
-
-        void setNext (CharEntry entry) { next = entry; }
-
-        void setPrev(CharEntry entry) { prev = entry; }
-
-        byte code() { return charCode; }
-
-        void setCode(byte charCode) { this.charCode = charCode; }
-
-        boolean hasNext() { return next != null; }
-
-        boolean hasPrev() { return prev != null; }
     }
 }
