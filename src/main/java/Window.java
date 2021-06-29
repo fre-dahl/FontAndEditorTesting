@@ -1,7 +1,9 @@
+import graphics.test.text.CharRegister;
 import graphics.test.text.Font;
 import graphics.test.text.Glyph;
 import graphics.test.Shader;
 import graphics.test.ShaderProgram;
+import graphics.test.text.Keyboard;
 import org.lwjgl.opengl.GL;
 
 import static org.lwjgl.glfw.GLFW.*;
@@ -15,11 +17,13 @@ import static org.lwjgl.opengl.GL30.glGenVertexArrays;
 import static org.lwjgl.opengl.GL31.GL_TEXTURE_BUFFER;
 import static org.lwjgl.system.MemoryUtil.NULL;
 
-public class Window {
+public class Window implements CharRegister {
 
     private long window;
     private Font font;
     private int vao;
+    private char letter = 'G';
+    private char prevLetter = letter;
 
     private float[] vertices = {
             // x, y,        r, g, b              ux, uy
@@ -53,7 +57,9 @@ public class Window {
             glfwTerminate();
             return;
         }
-
+        glfwSetCharCallback(window,Keyboard::charCallback);
+        glfwSetKeyCallback(window,Keyboard::keyCallback);
+        Keyboard.get().setReader(this);
         glfwMakeContextCurrent(window);
         glfwSwapInterval(1);
         glfwShowWindow(window);
@@ -68,7 +74,7 @@ public class Window {
 
         int vbo = glGenBuffers();
         glBindBuffer(GL_ARRAY_BUFFER, vbo);
-        glBufferData(GL_ARRAY_BUFFER, vertices, GL_STATIC_DRAW);
+        glBufferData(GL_ARRAY_BUFFER, vertices, GL_DYNAMIC_DRAW);
 
         int ebo = glGenBuffers();
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo);
@@ -85,12 +91,28 @@ public class Window {
         glEnableVertexAttribArray(2);
     }
 
+    public void setGlyph() {
+
+        if (letter != prevLetter) {
+
+            Glyph glyph = font.glyph(letter);
+            vertices[5] = glyph.u2(); vertices[6] = glyph.v();
+            vertices[12] = glyph.u2(); vertices[13] = glyph.v2();
+            vertices[19] = glyph.u(); vertices[20] = glyph.v2();
+            vertices[26] = glyph.u(); vertices[27] = glyph.v();
+
+            glBufferData(GL_ARRAY_BUFFER, vertices, GL_DYNAMIC_DRAW);
+        }
+
+
+
+    }
+
     public void run() {
         //Vector2f[] texCoords = font.getCharacter('A').textureCoordinates;
 
-        char c = 95;
 
-        Glyph glyph = font.glyph(c);
+        Glyph glyph = font.glyph(letter);
         vertices[5] = glyph.u2(); vertices[6] = glyph.v();
         vertices[12] = glyph.u2(); vertices[13] = glyph.v2();
         vertices[19] = glyph.u(); vertices[20] = glyph.v2();
@@ -133,6 +155,7 @@ public class Window {
             //fontShader.uploadTexture("uFontTexture", 0);
 
             glBindVertexArray(vao);
+            setGlyph();
 
             glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
 
@@ -141,5 +164,30 @@ public class Window {
         }
 
         font.freeMemory();
+    }
+
+    @Override
+    public void registerControl(int glfwKey) {
+
+    }
+
+    @Override
+    public void registerChar(byte charCode) {
+        letter = (char) charCode;
+    }
+
+    @Override
+    public void signalActivate() {
+        System.out.println("Activated");
+    }
+
+    @Override
+    public void signalDeactivate() {
+
+    }
+
+    @Override
+    public boolean isSleeping() {
+        return false;
     }
 }

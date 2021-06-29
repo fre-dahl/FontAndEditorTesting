@@ -32,13 +32,28 @@ public class Keyboard {
 
         if (key == GLFW_KEY_UNKNOWN) return;
 
-        if (action == GLFW_PRESS)
+        Keyboard keyboard = get();
 
-            get().keys[key] = true;
+        if (action == GLFW_PRESS) {
 
+            keyboard.keys[key] = true;
+
+            CharRegister reader = keyboard.reader;
+
+            if (reader != null) {
+
+                if (!reader.isSleeping()) {
+
+                    if (key < 0x20 || key > 0x7E) {
+
+                        reader.registerControl(key);
+                    }
+                }
+            }
+        }
         else if (action == GLFW_RELEASE)
 
-            get().keys[key] = false;
+            keyboard.keys[key] = false;
     }
 
     public static void charCallback(long window, int codepoint) {
@@ -51,7 +66,7 @@ public class Keyboard {
 
             if ((codepoint & 0x7F) == codepoint)
 
-                reader.registerInput((byte)codepoint);
+                reader.registerChar((byte)codepoint);
         }
     }
 

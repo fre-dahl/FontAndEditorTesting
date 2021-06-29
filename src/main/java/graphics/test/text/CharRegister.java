@@ -7,7 +7,9 @@ package graphics.test.text;
 
 public interface CharRegister {
 
-    void registerInput(byte keyCode);
+    void registerControl(int glfwKey);
+
+    void registerChar(byte charCode);
 
     void signalActivate();
 
