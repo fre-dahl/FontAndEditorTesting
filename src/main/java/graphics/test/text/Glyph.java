@@ -10,6 +10,8 @@ public class Glyph {
     private final float u2;
     private final float v2;
 
+    private int advance; // final
+
     public Glyph(int x, int y, int w, int h, int textureW, int textureH) {
 
         this.w = w;
