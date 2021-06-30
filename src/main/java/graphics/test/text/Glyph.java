@@ -2,8 +2,8 @@ package graphics.test.text;
 
 public class Glyph {
 
-    private final int w;
-    private final int h;
+    private final short w;
+    private final short h;
 
     private final float u;
     private final float v;
@@ -12,7 +12,7 @@ public class Glyph {
 
     private int advance; // final
 
-    public Glyph(int x, int y, int w, int h, int textureW, int textureH) {
+    public Glyph(int x, int y, short w, short h, int textureW, int textureH) {
 
         this.w = w;
         this.h = h;

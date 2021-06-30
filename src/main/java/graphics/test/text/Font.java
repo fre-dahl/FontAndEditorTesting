@@ -144,7 +144,7 @@ public class Font {
                 int h = glyphInfo[3 + pointer];
                 pointer += 4;
 
-                Glyph glyph = new Glyph(x, y, w, h, imageWidth, imageHeight);
+                Glyph glyph = new Glyph(x, y, (short) w,(short) h, imageWidth, imageHeight);
                 glyphs.put(i,glyph);
 
                 graphics2D.drawString(String.valueOf(i),x,y);
@@ -179,6 +179,8 @@ public class Font {
         buffer.flip();
 
         textureID = glGenTextures();
+
+        glBindTexture(GL_TEXTURE_2D,textureID);
 
         int blurParamValue = blur ? GL_LINEAR : GL_NEAREST;
 
