@@ -1,6 +1,6 @@
 package graphics.test.text;
 
-public class Glyph {
+public class GlyphOld {
 
     private final short w;
     private final short h;
@@ -12,7 +12,7 @@ public class Glyph {
 
     private int advance; // final
 
-    public Glyph(int x, int y, short w, short h, int textureW, int textureH) {
+    public GlyphOld(int x, int y, short w, short h, int textureW, int textureH) {
 
         this.w = w;
         this.h = h;
@@ -27,6 +27,7 @@ public class Glyph {
         v2 = (y - fix) * invImgHeight;
 
     }
+
 
     public int w() { return w; }
 

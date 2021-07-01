@@ -61,7 +61,7 @@ public class Texture {
 
     public int height() { return height; }
 
-    public String getPath() { return path; }
+    public String getPath() { return path == null ? "Internally Generated" : path; }
 
     private void setPath(String path) { this.path = path;}
 

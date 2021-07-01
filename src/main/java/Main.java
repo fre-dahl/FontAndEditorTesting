@@ -12,7 +12,8 @@ public class Main {
 
         //Font font = new Font("fonts/ttf/Topaz_a500_v1.0.ttf", outFolder + "Topaz_a500_16",16);
 
-        Window window = new Window();
+        Window window = Window.get();
+        window.init();
         window.run();
 
 

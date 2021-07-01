@@ -34,7 +34,7 @@ public class ShaderProgram {
         glAttachShader(id, shader.getID());
     }
 
-    public void checkStatus() {
+    private void checkStatus() {
 
         int status = glGetProgrami(id, GL_LINK_STATUS);
 

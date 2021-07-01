@@ -1,8 +1,13 @@
-package graphics.test.text;
+package fonts3;
 
+import graphics.test.text.GlyphOld;
 import org.lwjgl.system.MemoryUtil;
 
+import javax.imageio.ImageIO;
 import java.awt.*;
+import java.awt.font.FontRenderContext;
+import java.awt.font.GlyphMetrics;
+import java.awt.font.GlyphVector;
 import java.awt.image.BufferedImage;
 import java.io.*;
 import java.nio.ByteBuffer;
@@ -19,7 +24,7 @@ import static org.lwjgl.opengl.GL11.*;
 
 public class Font {
 
-    private final Map<Character,Glyph> glyphs;
+    private final Map<Character, GlyphOld> glyphs;
 
     public int textureID;
 
@@ -76,6 +81,7 @@ public class Font {
 
     private void createFont(java.awt.Font font, boolean antiAlias, boolean blur) {
 
+
         BufferedImage image = new BufferedImage(1,1, TYPE_INT_ARGB);
         Graphics2D graphics2D = image.createGraphics();
         graphics2D.setFont(font);
@@ -98,10 +104,34 @@ public class Font {
         int[] glyphInfo = new int[numDisplayable * 4];
         int pointer = 0;
 
+        char[] chars = {'.',',','%','~','y'};
+
+        FontRenderContext fontRenderContext = metrics.getFontRenderContext();
+
+        GlyphVector glyphVector = font.createGlyphVector(fontRenderContext,chars);
+
+        GlyphMetrics glyphMetrics = glyphVector.getGlyphMetrics(0);
+        GlyphMetrics glyphMetrics1 = glyphVector.getGlyphMetrics(1);
+        GlyphMetrics glyphMetrics2 = glyphVector.getGlyphMetrics(2);
+        GlyphMetrics glyphMetrics3 = glyphVector.getGlyphMetrics(3);
+        GlyphMetrics glyphMetrics4 = glyphVector.getGlyphMetrics(4);
+
+        float lsb = glyphMetrics4.getLSB();
+        float rsb = glyphMetrics4.getRSB();
+
+        int width = metrics.charWidth('y');
+        int decent = metrics.getDescent();
+        int maxDecent = metrics.getMaxDescent();
+        int ascent = metrics.getAscent();
+        int maxAscent = metrics.getMaxAscent();
+        int leading = metrics.getLeading();
+        int[] widths = metrics.getWidths();
+
+
         for (char i = 0; i < font.getNumGlyphs(); i++) {
 
-            if (font.canDisplay(i)) {
 
+            if (font.canDisplay(i)) {
                 int charWidth = metrics.charWidth(i);
                 glyphInfo[    pointer] = originX;
                 glyphInfo[1 + pointer] = originY;
@@ -144,7 +174,7 @@ public class Font {
                 int h = glyphInfo[3 + pointer];
                 pointer += 4;
 
-                Glyph glyph = new Glyph(x, y, (short) w,(short) h, imageWidth, imageHeight);
+                GlyphOld glyph = new GlyphOld(x, y, (short) w,(short) h, imageWidth, imageHeight);
                 glyphs.put(i,glyph);
 
                 graphics2D.drawString(String.valueOf(i),x,y);
@@ -152,14 +182,14 @@ public class Font {
         }
         graphics2D.dispose();
 
-        /*
+
         File file = new File( "test.png");
         try {
             ImageIO.write(image,"png",file);
         } catch (IOException e) {
             e.printStackTrace();
         }
-         */
+
 
         int[] pixels = new int[imageWidth * imageHeight];
 
@@ -196,7 +226,7 @@ public class Font {
     }
 
     // todo: getOrDefault() / Exception?
-    public Glyph glyph(char c) {
+    public GlyphOld glyph(char c) {
         return glyphs.get(c);
     }
 
